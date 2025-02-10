@@ -52,7 +52,7 @@ const Navbar = () => {
         {/* Profile Menu */}
         <Box sx={{ display: "flex", alignItems: "center" }}>
           <IconButton onClick={handleMenuClick}>
-            <Avatar sx={{ backgroundColor: "black",fontFamily:"Velyra",fontWeight:"bold" }}>A</Avatar>
+            <Avatar sx={{ backgroundColor: "black",fontFamily:"Velyra" }}>A</Avatar>
           </IconButton>
           <Menu
             anchorEl={anchorEl}
