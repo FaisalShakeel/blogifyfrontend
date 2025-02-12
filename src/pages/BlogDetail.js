@@ -27,6 +27,7 @@ import {
   Reply,
   Send,
 } from "@mui/icons-material";
+import Navbar from "../components/Navbar";
 
 // Define Velyra font family theme
 const theme = createTheme({
@@ -144,6 +145,7 @@ const BlogDetail = () => {
 
   return (
     <ThemeProvider theme={theme}>
+      <Navbar/>
       <Box sx={{ width: "90%", bgcolor: "background.default", p: 4 }}>
         {/* Blog Title */}
         <Typography variant="h3" gutterBottom sx={{ fontWeight: "bold" }}>

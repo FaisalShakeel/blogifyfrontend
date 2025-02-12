@@ -7,10 +7,12 @@ import {
   Paper,
   Avatar,
   Button,
+  createTheme,
+  ThemeProvider,
 } from "@mui/material";
 import Navbar from "../components/Navbar";
 
-const categories = ["Lifestyle", "Technology", "Health", "Business"];
+const categories = ["All","Lifestyle", "Technology", "Health", "Business"];
 
 const blogs = [
   {
@@ -54,11 +56,38 @@ const popularLists = [
 ];
 
 const Home = () => {
-  const [selectedCategory, setSelectedCategory] = useState("");
+  // Theme configuration
+  const theme = createTheme({
+    typography: {
+      fontFamily: '"Velyra", "Roboto", "Helvetica", "Arial", sans-serif', // Fallback fonts
+    },
+    palette: {
+      mode: "light",
+      background: { default: "#f5f5f5" },
+      text: { primary: "#000000" },
+    },
+    components: {
+      MuiCssBaseline: {
+        styleOverrides: `
+          @font-face {
+            font-family: 'Velyra';
+            font-style: normal;
+            font-weight: 400;
+            src: url('/path-to-velyra-font.woff2') format('woff2');
+          }
+        `,
+      },
+    },
+  });
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  
+
 
   return (
-    <Box sx={{display:"flex",flexDirection:"column",bgcolor:"#f5f5f5"}}>
+    <ThemeProvider theme={theme}>
         <Navbar/>
+
+    <Box sx={{display:"flex",flexDirection:"column",bgcolor:"#f5f5f5",overflow:"hidden"}}>
 
     <Container
       maxWidth="xl"
@@ -238,6 +267,7 @@ const Home = () => {
       </Grid>
     </Container>
     </Box>
+    </ThemeProvider>
   );
 };
 
