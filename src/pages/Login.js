@@ -5,12 +5,18 @@ import {
   TextField,
   Button,
   Box,
+  FormControlLabel,
+  RadioGroup,
+  FormLabel,
+  Radio,
   CssBaseline,
   Paper,
   Link,
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import { useNavigate } from "react-router-dom"; // Add the useNavigate hook for routing
+import axios from "axios";
+import CustomSnackbar from "../components/Snackbar";
 
 const theme = createTheme({
   typography: { fontFamily: "Velyra, sans-serif" },
@@ -24,7 +30,14 @@ const theme = createTheme({
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+ 
   const [errors, setErrors] = useState({});
+  
+  const [loading,setLoading] = useState(false)
+  const [isSnackbarOpen,setIsSnackbarOpen] = useState(false)
+  const [messae,setMessage] = useState("")
+  const [severity,setSeverity] = useState("")
+  
   const navigate = useNavigate(); // Use navigate for redirection
 
   const validateForm = () => {
@@ -37,6 +50,10 @@ const Login = () => {
     setErrors(tempErrors);
     return Object.keys(tempErrors).length === 0;
   };
+
+  const closeSnackbar=()=>{
+    setIsSnackbarOpen(false)
+  }
 
   const handleInputChange = (field, value) => {
     setErrors((prevErrors) => ({ ...prevErrors, [field]: "" }));
@@ -51,18 +68,34 @@ const Login = () => {
         break;
     }
   };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    setLoading(true)
+    try{
+      const response=await axios.post("http://localhost:5000/users/login",{email,password},{withCredentials:true})
+      if(response.data.success){
+        setMessage(response.data.message)
+        setSeverity("success")
+        setIsSnackbarOpen(true)
 
-    const userData = { email, password };
-    console.log("User Data:", userData);
-    // TODO: Send data to backend (API call)
-  };
+      }
+      else{
+        setMessage(response.data.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
 
-  const handleRedirectToSignUp = () => {
-    navigate("/create-account"); // Redirect to the create account page
+      }
+    }
+    catch(e){
+      setMessage(e.response?e.response.data.message:e.messae)
+      setSeverity("error")
+      setIsSnackbarOpen(true)
+
+    }
+    finally{
+      setLoading(false)
+    }
   };
 
   return (
@@ -117,9 +150,12 @@ const Login = () => {
                 error={!!errors.password}
                 helperText={errors.password}
               />
+                        
+        
               <Button
                 type="submit"
                 fullWidth
+                disabled={loading}
                 variant="contained"
                 sx={{
                   mt: 2,
@@ -131,13 +167,13 @@ const Login = () => {
                   "&:hover": { bgcolor: "#333333" },
                 }}
               >
-                Log In
+               {loading?"Logging In":"Log In"}
               </Button>
             </Box>
 
             <Box onClick={()=>{
                 navigate("/create-account")
-            }} sx={{cursor:"default", textAlign: "center", mt: 3 }}>
+            }} sx={{cursor:"pointer", textAlign: "center", mt: 3 }}>
               <Typography variant="body1" color="textSecondary">
                 Don't have an account?
                
@@ -145,6 +181,9 @@ const Login = () => {
             </Box>
           </Paper>
         </Box>
+        <CustomSnackbar open={isSnackbarOpen} message={messae} severity={severity} closeSnackbar={closeSnackbar} />
+  
+
       </Container>
     </ThemeProvider>
   );

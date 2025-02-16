@@ -45,6 +45,65 @@ import {
   Redo,
   Close as CloseIcon,
 } from '@mui/icons-material';
+import Navbar from '../components/Navbar';
+import axios from 'axios';
+import CustomSnackbar from '../components/Snackbar';
+const editorStyles = `
+  .ProseMirror {
+    font-family: 'Velyra', sans-serif;
+    > * + * {
+      margin-top: 0.75em;
+    }
+
+    img {
+      max-width: 100%;
+      height: auto;
+      &.ProseMirror-selectednode {
+        outline: 2px solid #000;
+      }
+    }
+
+    blockquote {
+      border-left: 3px solid #000;
+      padding-left: 1rem;
+      margin-left: 0;
+      font-style: italic;
+    }
+
+    ul, ol {
+      padding-left: 2rem;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      line-height: 1.2;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    iframe {
+      width: 100%;
+      margin: 1rem 0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    pre {
+      background: #f5f5f5;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    code {
+      font-family: 'Courier New', Courier, monospace;
+    }
+  }
+`;
+
+// Add the styles to the document
+const style = document.createElement('style');
+style.textContent = editorStyles;
+document.head.appendChild(style);
 
 const theme = createTheme({
   palette: {
@@ -245,6 +304,7 @@ const MenuBar = ({ editor }) => {
 
   return (
     <Box sx={{ mb: 2 }}>
+      
       <Paper
         variant="outlined"
         sx={{
@@ -329,6 +389,12 @@ const WriteBlog = () => {
     'Web Development',
   ]);
 
+  const [saveAsDraft,setSaveAsDraft] = useState(false)
+  const [isSnackbarOpen,setIsSnackbarOpen] = useState(false)
+  const [message,setMessage] = useState("")
+  const [severity,setSeverity] = useState("")
+
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -347,7 +413,7 @@ const WriteBlog = () => {
         types: ['heading', 'paragraph'],
       }),
     ],
-    content: '<p>Start writing your amazing blog post here...</p>',
+    content: '<p>Write Here Your Amazing Blog Post...</p>',
   });
 
   const handlePublish = async () => {
@@ -355,26 +421,23 @@ const WriteBlog = () => {
       setIsSubmitting(true);
       const content = editor?.getHTML();
       console.log("Blog Content",content)
-      const response = await fetch('/api/publish-blog', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          selectedTags,
-          category,
-          status: 'published',
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to publish blog');
+      const response=await axios.post("http://localhost:5000/blogs/create-blog",{content,title,tags,category,isInDraft:saveAsDraft},{withCredentials:true})
+      if (response.data.success){
+        setMessage(response.data.message)
+        setSeverity("success")
+        setIsSnackbarOpen(true)
+      }
+      else{
+        setMessage(response.data.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
+      }
       
-      alert('Blog published successfully!');
+      
     } catch (error) {
-      console.error('Error publishing blog:', error);
-      alert('Failed to publish blog. Please try again.');
+      setMessage(error.response?error.response.data.message:error.message)
+      setSeverity("error")
+      setIsSnackbarOpen(true)
     } finally {
       setIsSubmitting(false);
     }
@@ -411,6 +474,7 @@ const WriteBlog = () => {
 
   return (
     <ThemeProvider theme={theme}>
+      <Navbar/>
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
@@ -510,83 +574,31 @@ const WriteBlog = () => {
                 <Button
                   variant="outlined"
                   color="inherit"
-                  onClick={handleSaveAsDraft}
-                  disabled={isSubmitting}
+                  onClick={()=>{
+                    setSaveAsDraft(!saveAsDraft)
+                  }}
+                  sx={{backgroundColor:saveAsDraft?"black":"inherit",color:saveAsDraft?"white":"black"}}
+                  
                 >
-                  Save as Draft
+                 {saveAsDraft?"Saving as draft":"Save as draft"}
                 </Button>
                 <Button
                   variant="contained"
                   onClick={handlePublish}
                   disabled={isSubmitting}
                 >
-                  Publish Blog{isSubmitting ? 'Publishing...' : 'Publish Blog'}
+                  {isSubmitting ? 'Creating...' : 'Create Blog'}
                 </Button>
               </Box>
             </Grid>
           </Grid>
         </Paper>
+        <CustomSnackbar open={isSnackbarOpen} closeSnackbar={setIsSnackbarOpen} message={message} severity={severity} />
       </Container>
     </ThemeProvider>
   );
 };
 
-// Custom styles for the editor content
-const editorStyles = `
-  .ProseMirror {
-    > * + * {
-      margin-top: 0.75em;
-    }
 
-    img {
-      max-width: 100%;
-      height: auto;
-      &.ProseMirror-selectednode {
-        outline: 2px solid #000;
-      }
-    }
-
-    blockquote {
-      border-left: 3px solid #000;
-      padding-left: 1rem;
-      margin-left: 0;
-      font-style: italic;
-    }
-
-    ul, ol {
-    font-family:Velyra,
-      padding-left: 2rem;
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-      line-height: 1.2;
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-    }
-
-    iframe {
-      width: 100%;
-      margin: 1rem 0;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    pre {
-      background: #f5f5f5;
-      padding: 1rem;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-
-    code {
-      font-family: 'Courier New', Courier, monospace;
-    }
-  }
-`;
-
-// Add the styles to the document
-const style = document.createElement('style');
-style.textContent = editorStyles;
-document.head.appendChild(style);
 
 export default WriteBlog;
