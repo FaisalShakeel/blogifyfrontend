@@ -16,10 +16,17 @@ import {
   ListItemText,
   ThemeProvider,
   createTheme,
+  ListItemIcon,
+  Divider,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import MenuIcon from "@mui/icons-material/Menu";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
+import LogoutIcon from "@mui/icons-material/Logout";
+import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import CreateOutlinedIcon from "@mui/icons-material/CreateOutlined";
 
 const theme = createTheme({
   typography: {
@@ -136,7 +143,7 @@ const Navbar = () => {
               sx={{
                 backgroundColor: "black",
                 color: "white",
-                fontWeight: "bold",
+                
                 fontSize: "16px",
                 textTransform: "none",
                 borderRadius: "20px",
@@ -158,50 +165,138 @@ const Navbar = () => {
               onClose={handleMenuClose}
               PaperProps={{ 
                 sx: { 
-                  width: 200, 
-                  borderRadius: 2, 
-                  backgroundColor: "white", 
-                  color: "black" 
+                  width: 250,
+                  borderRadius: 2,
+                  backgroundColor: "white",
+                  color: "black",
+                  mt: 1,
                 } 
               }}
             >
-              <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-              <MenuItem onClick={handleMenuClose}>Logout</MenuItem>
+              {/* User Profile Section */}
+              <Box sx={{ p: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+                  <Avatar 
+                    sx={{ 
+                      width: 48, 
+                      height: 48, 
+                      backgroundColor: "black", 
+                      color: "white" 
+                    }}
+                  >
+                    A
+                  </Avatar>
+                  <Box>
+                    <Typography sx={{ fontWeight: "bold" }}>John Doe</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      john.doe@example.com
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+              
+              <Divider />
+
+              {/* Menu Items */}
+              <MenuItem onClick={handleMenuClose} sx={{ py: 1.5 }}>
+                <ListItemIcon>
+                  <PersonOutlineIcon sx={{ color: "black" }} />
+                </ListItemIcon>
+                <ListItemText primary="My Profile" />
+              </MenuItem>
+              
+              <MenuItem onClick={handleMenuClose} sx={{ py: 1.5 }}>
+                <ListItemIcon>
+                  <DriveFileRenameOutlineIcon sx={{ color: "black" }} />
+                </ListItemIcon>
+                <ListItemText primary="Drafts" />
+              </MenuItem>
+              
+              <Divider />
+              
+              <MenuItem onClick={handleMenuClose} sx={{ py: 1.5 }}>
+                <ListItemIcon>
+                  <LogoutIcon sx={{ color: "black" }} />
+                </ListItemIcon>
+                <ListItemText primary="Logout" />
+              </MenuItem>
             </Menu>
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* Drawer for Mobile Navigation */}
+      {/* Enhanced Drawer for Mobile Navigation */}
       <Drawer
         anchor="left"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         sx={{ 
           ".MuiDrawer-paper": { 
-            width: 260, 
-            padding: 2, 
+            width: 280, 
             backgroundColor: "white" 
           } 
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-          <Avatar sx={{ backgroundColor: "black", color: "white" }}>A</Avatar>
-          <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-            John Doe
-          </Typography>
+        {/* User Profile Section in Drawer */}
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+            <Avatar 
+              sx={{ 
+                width: 48, 
+                height: 48, 
+                backgroundColor: "black", 
+                color: "white" 
+              }}
+            >
+              A
+            </Avatar>
+            <Box>
+              <Typography sx={{ fontWeight: "bold" }}>John Doe</Typography>
+              <Typography variant="body2" color="text.secondary">
+                john.doe@example.com
+              </Typography>
+            </Box>
+          </Box>
         </Box>
-        <List>
-          <ListItem button>
+        
+        <Divider />
+
+        {/* Enhanced List Items with Icons */}
+        <List sx={{ px: 2 }}>
+          <ListItem button sx={{ py: 1.5 }}>
+            <ListItemIcon>
+              <HomeOutlinedIcon sx={{ color: "black" }} />
+            </ListItemIcon>
             <ListItemText primary="Home" />
           </ListItem>
-          <ListItem button>
+
+          <ListItem button sx={{ py: 1.5 }}>
+            <ListItemIcon>
+              <CreateOutlinedIcon sx={{ color: "black" }} />
+            </ListItemIcon>
             <ListItemText primary="Write Blog" />
           </ListItem>
-          <ListItem button>
+
+          <ListItem button sx={{ py: 1.5 }}>
+            <ListItemIcon>
+              <PersonOutlineIcon sx={{ color: "black" }} />
+            </ListItemIcon>
             <ListItemText primary="Profile" />
           </ListItem>
-          <ListItem button>
+
+          <ListItem button sx={{ py: 1.5 }}>
+            <ListItemIcon>
+              <DriveFileRenameOutlineIcon sx={{ color: "black" }} />
+            </ListItemIcon>
+            <ListItemText primary="Drafts" />
+          </ListItem>
+
+          <Divider sx={{ my: 1 }} />
+
+          <ListItem button sx={{ py: 1.5 }}>
+            <ListItemIcon>
+              <LogoutIcon sx={{ color: "black" }} />
+            </ListItemIcon>
             <ListItemText primary="Logout" />
           </ListItem>
         </List>
