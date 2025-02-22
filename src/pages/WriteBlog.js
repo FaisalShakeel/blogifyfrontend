@@ -48,6 +48,7 @@ import {
 import Navbar from '../components/Navbar';
 import axios from 'axios';
 import CustomSnackbar from '../components/Snackbar';
+import { useNavigate } from 'react-router-dom';
 const editorStyles = `
   .ProseMirror {
     font-family: 'Velyra', sans-serif;
@@ -375,6 +376,7 @@ const MenuBar = ({ editor }) => {
 };
 
 const WriteBlog = () => {
+  const navigate = useNavigate()
   const [title, setTitle] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [category, setCategory] = useState('');
@@ -426,6 +428,9 @@ const WriteBlog = () => {
         setMessage(response.data.message)
         setSeverity("success")
         setIsSnackbarOpen(true)
+        setTimeout(()=>{
+          navigate("/")
+        },1000)
       }
       else{
         setMessage(response.data.message)
@@ -512,6 +517,8 @@ const WriteBlog = () => {
                   <MenuItem value="Business">Business</MenuItem>
                   <MenuItem value="Health">Health</MenuItem>
                   <MenuItem value="Travel">Travel</MenuItem>
+                  <MenuItem value="Other">Other</MenuItem>
+                   
                 </Select>
               </FormControl>
             </Grid>

@@ -27,6 +27,7 @@ import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutli
 import LogoutIcon from "@mui/icons-material/Logout";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CreateOutlinedIcon from "@mui/icons-material/CreateOutlined";
+import { useNavigate } from "react-router-dom";
 
 const theme = createTheme({
   typography: {
@@ -35,6 +36,7 @@ const theme = createTheme({
 });
 
 const Navbar = () => {
+  const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -139,6 +141,9 @@ const Navbar = () => {
             gap: 2,
           }}>
             <Button
+            onClick={()=>{
+              navigate("/write-blog")
+            }}
               variant="contained"
               sx={{
                 backgroundColor: "black",

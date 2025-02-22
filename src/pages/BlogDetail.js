@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Box,
   Typography,
@@ -20,6 +20,7 @@ import {
   CardMedia,
   InputAdornment,
 } from "@mui/material";
+import "./BlogContent.css";
 import {
   FavoriteBorder,
   ChatBubbleOutline,
@@ -28,6 +29,8 @@ import {
   Send,
 } from "@mui/icons-material";
 import Navbar from "../components/Navbar";
+import axios from "axios";
+import { useParams } from "react-router-dom";
 
 // Define Velyra font family theme
 const theme = createTheme({
@@ -111,10 +114,14 @@ const saveLists = [
 ];
 
 const BlogDetail = () => {
+  const {id} =useParams()
+  const [blog,setBlog] = useState({})
   const [showComments, setShowComments] = useState(false);
   const [showReplies, setShowReplies] = useState({});
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
+
+  const contentRef= useRef()
 
   const handleCommentClick = () => {
     setShowComments(!showComments);
@@ -142,6 +149,36 @@ const BlogDetail = () => {
       setCommentText("");
     }
   };
+  const getBlogDetails=async()=>{
+    try{
+
+      const response= await axios.get(`http://localhost:5000/blogs/blog-detail/${id}`,{withCredentials:true})
+      console.log("Blog Details",response.data)
+      setBlog(response.data.blog)
+    }
+    catch(e){
+
+    }
+    finally{
+
+    }
+  }
+  // Apply styles to <img> and <video> elements
+  useEffect(() => {
+    if (contentRef.current) {
+      const mediaElements = contentRef.current.querySelectorAll("img, video");
+      mediaElements.forEach((element) => {
+        element.style.maxWidth = "50%"; // Reduce width
+        element.style.height = "auto"; // Maintain aspect ratio
+        element.style.borderRadius = "8px"; // Optional: Add rounded corners
+        element.style.margin = "16px 0"; // Optional: Add spacing
+      });
+    }
+  }, [blog]); // Re-run when blog.content changes
+
+  useEffect(()=>{
+    getBlogDetails()
+  },[])
 
   return (
     <ThemeProvider theme={theme}>
@@ -149,22 +186,26 @@ const BlogDetail = () => {
       <Box sx={{ width: "90%", bgcolor: "background.default", p: 4 }}>
         {/* Blog Title */}
         <Typography variant="h3" gutterBottom sx={{ fontWeight: "bold" }}>
-          Impacts of AI
+       {blog.title}
         </Typography>
 
         {/* Blog Media */}
         <Box
-          component="img"
-          src="https://via.placeholder.com/800x400"
-          alt="Blog Media"
+          component="div"
+
           sx={{ width: "100%", borderRadius: 2, mb: 3 }}
         />
-
-        {/* Blog Description */}
-        <Typography variant="body1" sx={{ mb: 3 }}>
-          Artificial Intelligence (AI) is transforming industries across the globe. From healthcare to finance, AI is enabling new possibilities and solving complex problems. This blog explores the profound impacts of AI on society and the future of work.
-        </Typography>
-
+        {/* Blog Content */}
+        <Box sx={{ mb: 3 }}>
+          <div
+            className="blog-content" // Add a class
+            dangerouslySetInnerHTML={{ __html: blog.content }}
+            style={{
+              maxWidth: "80%", // Ensure content doesn't overflow
+              overflow: "hidden", // Hide overflow
+            }}
+          />
+        </Box>
         {/* Like, Comment, Save Buttons */}
         <Box sx={{ display: "flex", gap: 2, mb: 4 }}>
           <IconButton>
