@@ -229,7 +229,7 @@ const Home = () => {
                   <Grid container spacing={2}>
                     {filteredPopularBlogs.length > 0 ? (
                       filteredPopularBlogs.map((blog, index) => (
-                        <Grid item xs={12} key={index}>
+                        <Grid onClick={()=>{navigate(`/blog/${blog._id}`)}} item xs={12} key={index}>
                           <Paper 
                             sx={{ 
                               p: 3, 

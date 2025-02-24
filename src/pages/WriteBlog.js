@@ -48,6 +48,7 @@ import {
 import Navbar from '../components/Navbar';
 import axios from 'axios';
 import CustomSnackbar from '../components/Snackbar';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useNavigate } from 'react-router-dom';
 const editorStyles = `
   .ProseMirror {
@@ -395,6 +396,9 @@ const WriteBlog = () => {
   const [isSnackbarOpen,setIsSnackbarOpen] = useState(false)
   const [message,setMessage] = useState("")
   const [severity,setSeverity] = useState("")
+  const handleBack = () => {
+    navigate(-1);
+  };
 
 
   const editor = useEditor({
@@ -448,39 +452,27 @@ const WriteBlog = () => {
     }
   };
 
-  const handleSaveAsDraft = async () => {
-    try {
-      setIsSubmitting(true);
-      const content = editor?.getHTML();
-      const response = await fetch('/api/publish-blog', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          content,
-          selectedTags,
-          category,
-          status: 'draft',
-        }),
-      });
+ 
 
-      if (!response.ok) throw new Error('Failed to save draft');
-      
-      alert('Draft saved successfully!');
-    } catch (error) {
-      console.error('Error saving draft:', error);
-      alert('Failed to save draft. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    
 
   return (
     <ThemeProvider theme={theme}>
       <Navbar/>
+      {/* Back Button */}
+      <Box sx={{ mt: 2,ml:2 }}>
+          <IconButton 
+            onClick={handleBack}
+            sx={{ 
+              backgroundColor: '#f5f5f5',
+              '&:hover': { backgroundColor: '#eeeeee' }
+            }}
+          >
+            <ArrowBackIcon />
+          </IconButton>
+        </Box>
       <Container maxWidth="xl" sx={{ py: 4 }}>
+        
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h3" gutterBottom sx={{ fontWeight: 'bold', mb: 4 }}>
             Write a New Blog
