@@ -1,32 +1,27 @@
 /* BlogContent.css */
 .blog-content {
-    font-family: "Velyra", Arial, sans-serif; /* Apply Velyra to the entire container */
-  }
-  
-  .blog-content img{
+  font-family: "Velyra", Arial, sans-serif; /* Apply Velyra to the entire container */
+}
 
-    min-width: 400px; /* Reduce width */
-    height: 300px; /* Set a fixed height */
-    object-fit: cover; /* Ensure the media fits within the container */
-    border-radius: 8px; /* Optional: Add rounded corners */
-    margin: 16px 0; /* Optional: Add spacing */
-  }
-  .blog-content video {
-    min-width: 400px; /* Reduce width */
-    height: 300px; /* Set a fixed height */
-    object-fit: cover; /* Ensure the media fits within the container */
-    border-radius: 8px; /* Optional: Add rounded corners */
-    margin: 16px 0; /* Optional: Add spacing */
-  }
-  
-  .blog-content h1 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin: 24px 0 16px;
-  }
-  
-  .blog-content p {
-    font-size: 1rem;
-    line-height: 1.6;
-    margin: 16px 0;
-  }
+/* Make both elements consistent with fixed width instead of min-width */
+.blog-content img,
+.blog-content video {
+  width: 400px; /* Replace min-width with width */
+  height: 300px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin: 16px 0;
+  display: block; /* Ensures consistent block-level behavior */
+}
+
+.blog-content h1 {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 24px 0 16px;
+}
+
+.blog-content p {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 16px 0;
+}

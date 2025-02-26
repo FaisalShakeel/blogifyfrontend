@@ -157,6 +157,7 @@ const Home = () => {
                           <Paper 
                             sx={{ 
                               p: 3, 
+                              cursor:"pointer",
                               borderRadius: 2, 
                               boxShadow: 2,
                               transition: "transform 0.2s ease",
@@ -232,6 +233,7 @@ const Home = () => {
                         <Grid onClick={()=>{navigate(`/blog/${blog._id}`)}} item xs={12} key={index}>
                           <Paper 
                             sx={{ 
+                              cursor:"pointer",
                               p: 3, 
                               borderRadius: 2, 
                               boxShadow: 2,

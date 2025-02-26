@@ -17,22 +17,20 @@ import {
   Grid,
   Card,
   CardContent,
-  CardMedia,
+
   InputAdornment,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  Input,
-  InputLabel,
+
   CircularProgress,
+  Chip,
 } from "@mui/material";
 import "./BlogContent.css";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { BookmarkOutlined, CameraAlt as CameraAltIcon, Edit as EditIcon, FavoriteBorderOutlined, FavoriteOutlined } from "@mui/icons-material";
+import { BookmarkOutlined, CameraAlt as CameraAltIcon, Close, Edit as EditIcon, FavoriteBorderOutlined, FavoriteOutlined } from "@mui/icons-material";
 import { useNavigate } from 'react-router-dom';
-
 import {
   FavoriteBorder,
   ChatBubbleOutline,
@@ -45,6 +43,7 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import CustomSnackbar from "../components/Snackbar";
 import { AuthContext } from "../contexts/AuthContext";
+import moment from "moment/moment";
 
 // Define Velyra font family theme
 const theme = createTheme({
@@ -60,63 +59,30 @@ const theme = createTheme({
     },
   },
 });
+const extractTextFromHTML = (htmlString) => {
+  if (!htmlString) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = htmlString;
+  const text = temp.textContent || temp.innerText;
+  return text.replace(/\s+/g, " ").trim();
+};
 
-// Mock data for comments and replies
-const comments = [
-  {
-    id: 1,
-    author: "Faisal Shakeel",
-    text: "This is a great blog post!I really like this",
-    createdAt: "2 days ago",
-    replies: [
-      { id: 11, author: "John Doe", text: "I agree!", createdAt: "1 day ago" },
-      { id: 12, author: "Alexa David", text: "Nice point!", createdAt: "1 day ago" },
-    ],
-  },
-  {
-    id: 2,
-    author: "Smith Rogers",
-    text: "Very informative.Keep it up",
-    createdAt: "3 days ago",
-    replies: [
-      { id: 21, author: "David Smith", text: "Thanks for sharing!", createdAt: "2 days ago" },
-    ],
-  },
-];
-// Mock data for related blogs
-const relatedBlogs = [
-  {
-    id: 1,
-    title: "The Future of AI",
-    image: "https://via.placeholder.com/200",
-    author: "John Doe",
-    createdAt: "3 days ago",
-  },
-  {
-    id: 2,
-    title: "Machine Learning Basics",
-    image: "https://via.placeholder.com/200",
-    author: "Jane Smith",
-    createdAt: "5 days ago",
-  },
-  {
-    id: 3,
-    title: "Deep Learning Explained",
-    image: "https://via.placeholder.com/200",
-    author: "Alice Johnson",
-    createdAt: "1 week ago",
-  },
-];
+
+
 const BlogDetail = () => {
   const{user} = useContext(AuthContext)
   const navigate = useNavigate()
   const {id} =useParams()
-  const [blog,setBlog] = useState({})
+  const [blog, setBlog] = useState({})
+  const [relatedBlogs, setRelatedBlogs] = useState([])
   const [showComments, setShowComments] = useState(false);
   const [showReplies, setShowReplies] = useState({});
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
-  
+  const [IsCommenting, setIsCommenting]  = useState(false)
+  const [comments ,setComments] = useState([])
+  const [commentId, setCommentId] = useState("")
+  const [replyingToName, setReplyingToName] = useState("")  
   const [newListDialogOpen, setNewListDialogOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newListDescription, setNewListDescription] = useState("");
@@ -132,6 +98,8 @@ const BlogDetail = () => {
   const [isLiking, setIsLiking] = useState(false);
   const [isLikeLoading, setIsLikeLoading] = useState(true);
   const [playlistsLoading, setPlaylistsLoading] = useState(true);
+  
+  const commentTextFieldRef = useRef()
 
   const [loading, setLoading] = useState(true)
 
@@ -165,13 +133,7 @@ const BlogDetail = () => {
     setSaveModalOpen(false);
   };
 
-  const handlePostComment = () => {
-    if (commentText.trim()) {
-      // Add logic to post the comment
-      console.log("Posted:", commentText);
-      setCommentText("");
-    }
-  };
+
   const isAlreadySaved = () => {
     if (userLists.length === 0) return false;
   
@@ -201,21 +163,32 @@ const BlogDetail = () => {
       return { _isLiked: false };
     }
   };
-  const getBlogDetails=async()=>{
-    try{
+  const getBlogDetails = async () => {
+    try {
+        setLoading(true); // Set loading to true before making the API call
 
-      const response= await axios.get(`http://localhost:5000/blogs/blog-detail/${id}`,{withCredentials:true})
-      console.log("Blog Details",response.data)
-      setBlog(response.data.blog)
-    }
-    catch(e){
+        const response = await axios.get(`http://localhost:5000/blogs/blog-detail/${id}`, { withCredentials: true });
+        console.log("Blog Details", response.data);
 
+        if (response.data.success) {
+            setBlog(response.data.blog); // Set the blog data
+            setRelatedBlogs(response.data.relatedBlogs); // Set related blogs
+            setComments(response.data.blog.comments) 
+          } else {
+            setMessage(response.data.message || "Failed to fetch blog details"); // Fallback message
+            setSeverity("error");
+            setIsSnackbarOpen(true);
+        }
+    } catch (e) {
+        console.error("Error fetching blog details:", e);
+        setMessage(e.response?.data?.message || "An unexpected error occurred"); // Handle undefined `e.response`
+        setSeverity("error");
+        setIsSnackbarOpen(true);
+    } finally {
+        setLoading(false); // Set loading to false after the operation
     }
-    finally{
-      setLoading(false)
+};
 
-    }
-  }
   const likeBlog = async () => {
     if (isLiking) return;
     
@@ -346,6 +319,7 @@ const BlogDetail = () => {
         }
       );
       if (response.data.success) {
+    
 
         setMessage(response.data.message)
         setSeverity("success")
@@ -367,6 +341,68 @@ const BlogDetail = () => {
       setIsUnsaving(false);
     }
   };
+  const replyToComment=async()=>{
+    setIsCommenting(true)
+    try{
+      const response=await axios.put("http://localhost:5000/blogs/reply-to-comment",{blogId:id,commentId,replyText:commentText},{withCredentials:true})
+      if(response.data.success){
+      
+      setComments(response.data.blog.comments)
+      setReplyingToName("")
+      setCommentText("")
+      setMessage(response.data.message)
+      setSeverity("success")
+      setIsSnackbarOpen(true)
+      }
+      else{
+        setMessage(response.data.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
+
+      }
+    }
+    catch(e){
+      setMessage(e.response?e.response.data.message:e.message)
+      setSeverity("error")
+      setIsSnackbarOpen(true)
+    
+
+    }
+    finally{
+      setIsCommenting(false)
+    }
+  }
+  const addComment=async()=>{
+    setIsCommenting(true)
+    try{
+      const response=await axios.post("http://localhost:5000/blogs/add-comment",{blogId:id,comment:commentText},{withCredentials:true})
+      if(response.data.success){
+        
+        setComments(response.data.blog.comments)
+        setCommentText("")
+        setMessage(response.data.message)
+        setSeverity("success")
+        setIsSnackbarOpen(true)
+      }
+      else{
+        setMessage(response.data.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
+        
+
+      }
+    }
+    catch(e){
+      setMessage(e.response?e.response.data.message:e.message)
+      setSeverity("error")
+      setIsSnackbarOpen(true)
+      
+
+    }
+    finally{
+      setIsCommenting(false)
+    }
+  }
   useEffect(() => {
     if (blog && blog.likedBy) {
       setIsLikeLoading(true); // Set loading before checking
@@ -393,7 +429,7 @@ const BlogDetail = () => {
 
   useEffect(()=>{
     getBlogDetails()
-  },[])
+  },[id])
   if(loading){
     return(
       <Box>
@@ -426,7 +462,7 @@ const BlogDetail = () => {
        {blog.title}
         </Typography>
 
-        {/* Blog Media */}
+        {/* Blog Content */}
         <Box
           component="div"
 
@@ -501,101 +537,167 @@ const BlogDetail = () => {
 
 
         {/* Comment Section */}
-        {showComments && (
-          <Box sx={{ mt: 3 }}>
-            <TextField
-              fullWidth
-              placeholder="Add a comment..."
-              variant="standard"
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={handlePostComment}>
-                      <Send />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-                sx: { borderBottom: "2px solid black" }, // Only bottom border
-              }}
-              sx={{ mb: 3 }}
+{showComments && (
+  <Box sx={{ mt: 3 }}>
+    {/* Comment Input Field */}
+    <TextField
+    ref={commentTextFieldRef}
+  fullWidth
+  placeholder={replyingToName ? `Replying to ${replyingToName}...` : "Add a comment..."}
+  variant="standard"
+  value={replyingToName ? `@${replyingToName} ${commentText}` : commentText}
+  onChange={(e) => {
+    // Remove the replyingToName prefix if it exists
+    const newValue = e.target.value.replace(`@${replyingToName} `, "");
+    setCommentText(newValue);
+  }}
+  InputProps={{
+    endAdornment: (
+      <InputAdornment position="end">
+        {/* Button to clear replyingToName */}
+        {replyingToName && (
+          <IconButton onClick={() => setReplyingToName("")}>
+            <Close /> {/* Assuming you have a Close icon */}
+          </IconButton>
+        )}
+        <IconButton
+        disabled={IsCommenting}
+          onClick={() => {
+            if (replyingToName) {
+              replyToComment();
+            } else {
+              addComment();
+            }
+          }}
+          sx={{ color: "black" }}
+        >
+        {IsCommenting?<CircularProgress style={{height:"18px",width:"18px",color:"black"}} thickness={10}/>:<Send/>}
+        </IconButton>
+      </InputAdornment>
+    ),
+    sx: {
+      "&::before, &::after": {
+        borderBottom: "2px solid black", // Default and hover state
+      },
+      "&:focus-within::after": {
+        borderBottom: "2px solid black", // Focus state
+        transform: "scaleX(1)", // Ensure the border remains visible
+      },
+    },
+  }}
+  sx={{ mb: 3 }}
+/>
+
+    {/* Comments List */}
+    <List>
+      {comments.map((comment) => (
+        <React.Fragment key={comment._id}>
+          {/* Main Comment */}
+          <ListItem alignItems="flex-start" sx={{ borderBottom: "1px solid #e0e0e0", py: 2 }}>
+            <ListItemAvatar>
+              <Avatar sx={{ bgcolor: "black", color: "white" }}>{comment.name[0]}</Avatar>
+            </ListItemAvatar>
+            <ListItemText
+              primary={
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    {comment.name}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {comment.date}
+                  </Typography>
+                </Box>
+              }
+              secondary={comment.text}
             />
-            <List>
-              {comments.map((comment) => (
-                <React.Fragment key={comment.id}>
-                  <ListItem alignItems="flex-start">
-                    <ListItemAvatar>
-                      <Avatar>{comment.author[0]}</Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                            {comment.author}
-                          </Typography>
-                          <Typography variant="caption" color="textSecondary">
-                            {comment.createdAt}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={comment.text}
-                    />
-                    <Button
-                      variant="contained"
-                      sx={{ bgcolor: "black", color: "white", textTransform: "none" }}
-                      onClick={() => handleReplyClick(comment.id)}
-                    >
-                      Reply
-                    </Button>
-                  </ListItem>
-                  {showReplies[comment.id] && (
-                    <List sx={{ pl: 4 }}>
-                      {comment.replies.map((reply) => (
-                        <ListItem key={reply.id} alignItems="flex-start">
-                          <ListItemAvatar>
-                            <Avatar>{reply.author[0]}</Avatar>
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                                  {reply.author}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                  {reply.createdAt}
-                                </Typography>
-                              </Box>
-                            }
-                            secondary={reply.text}
-                          />
-                          <Button
-                            variant="contained"
-                            sx={{ bgcolor: "black", color: "white", textTransform: "none" }}
-                            onClick={() => handleReplyClick(reply.id)}
-                          >
-                            Reply
-                          </Button>
-                        </ListItem>
-                      ))}
-                    </List>
-                  )}
-                  {comment.replies.length > 0 && (
-                    <Button
-                      variant="contained"
-                      sx={{ bgcolor: "black", color: "white", ml: 4, textTransform: "none" }}
-                      onClick={() => handleReplyClick(comment.id)}
-                    >
-                      {showReplies[comment.id] ? "Hide Replies" : "Show Replies"}
-                    </Button>
-                  )}
-                  <Divider sx={{ my: 2 }} />
-                </React.Fragment>
+            <Button
+              variant="outlined"
+              sx={{
+                borderColor: "black",
+                color: "black",
+                textTransform: "none",
+                "&:hover": { bgcolor: "black", color: "white" },
+              }}
+              onClick={() => {
+              
+                setReplyingToName(comment.name);
+                setCommentId(comment._id);
+                // Scroll to the TextField
+   commentTextFieldRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              Reply
+            </Button>
+          </ListItem>
+
+          {/* Replies Section */}
+          {showReplies[comment._id] && (
+            <List sx={{ pl: 4 }}>
+              {comment.replies.map((reply) => (
+                <ListItem key={reply._id} alignItems="flex-start" sx={{ py: 2 }}>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: "black", color: "white" }}>{reply.name[0]}</Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                          {reply.name}
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary">
+                          {reply.date}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={reply.text}
+                  />
+                  <Button
+                    variant="outlined"
+                    sx={{
+                      borderColor: "black",
+                      color: "black",
+                      textTransform: "none",
+                      "&:hover": { bgcolor: "black", color: "white" },
+                    }}
+                    onClick={() => {
+                      setReplyingToName(reply.name)
+                      handleReplyClick(reply._id);
+                      setCommentId(comment._id);
+                      // Scroll to the TextField
+    commentTextFieldRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }}
+                  >
+                    Reply
+                  </Button>
+                </ListItem>
               ))}
             </List>
-          </Box>
-        )}
+          )}
 
+          {/* Show/Hide Replies Button */}
+          {comment.replies.length > 0 && (
+            <Box sx={{ display: "flex", justifyContent: "flex-end", mt: 1 }}>
+              <Button
+                variant="text"
+                sx={{
+                  color: "black",
+                  textTransform: "none",
+                  "&:hover": { bgcolor: "transparent", textDecoration: "underline" },
+                }}
+                onClick={() => handleReplyClick(comment._id)}
+              >
+                {showReplies[comment._id] ? "Hide Replies" : `Show ${comment.replies.length} Replies`}
+              </Button>
+            </Box>
+          )}
+
+          {/* Divider */}
+          <Divider sx={{ my: 2 }} />
+        </React.Fragment>
+      ))}
+    </List>
+  </Box>
+)}
         {/* Author Section */}
         <Box sx={{ mt: 4 }}>
           <Typography variant="h4" sx={{ fontWeight: 800, mb: 2 }}>
@@ -608,7 +710,7 @@ const BlogDetail = () => {
               {blog.publishedByName}
               </Typography>
               <Typography variant="body2" color="textSecondary">
-                A passionate writer and AI enthusiast with over 10 years of experience in the tech industry.
+           {blog.publishedByBio}
               </Typography>
             </Box>
           </Box>
@@ -619,6 +721,25 @@ const BlogDetail = () => {
             View Other Blogs By This Author
           </Button>
         </Box>
+        
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 8 }}>
+      {blog.tags.map((tag, index) => (
+        <Chip
+          key={index}
+          label={tag}
+          sx={{
+            backgroundColor: "black",
+            color: "white",
+            borderRadius: "4px",
+            fontWeight: "bold",
+            "&:hover": {
+              backgroundColor: "grey.800", // Slightly lighter black on hover
+            },
+          }}
+        />
+      ))}
+    </Box>
+
 
         {/* Related Blogs */}
         <Box sx={{ mt: 4 }}>
@@ -626,27 +747,72 @@ const BlogDetail = () => {
             Related Blogs
           </Typography>
           <Grid container spacing={3}>
-            {relatedBlogs.map((blog) => (
-              <Grid item xs={12} sm={6} md={4} key={blog.id}>
-                <Card sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
-                  <CardMedia
-                    component="img"
-                    height="140"
-                    image={blog.image}
-                    alt={blog.title}
-                  />
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: "bold" }}>
-                      {blog.title}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      By {blog.author} | {blog.createdAt}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+  {relatedBlogs.map((blog) => (
+    <Grid item xs={12} sm={6} md={4} key={blog._id}>
+      <Card
+      onClick={()=>{
+        navigate(`/blog/${blog._id}`)
+      }}
+        sx={{
+          height: "100%",
+          cursor:"pointer",
+          display: "flex",
+          flexDirection: "column",
+          backgroundColor: "white", // White background
+          boxShadow: 3, // Subtle shadow
+          transition: "transform 0.2s, box-shadow 0.2s",
+          border: "1px solid #e0e0e0", // Light border for definition
+          "&:hover": {
+            transform: "scale(1.02)", // Slight scale on hover
+            boxShadow: 6, // Increase shadow on hover
+          },
+        }}
+      >
+        <CardContent sx={{ flexGrow: 1 }}>
+          {/* Blog Title */}
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: "bold",
+              mb: 2, // Margin bottom
+              color: "black", // Black title
+            }}
+          >
+            {blog.title}
+          </Typography>
+
+          {/* Blog Description */}
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 2, // Margin bottom
+              color: "text.secondary", // Gray for description
+              display: "-webkit-box",
+              WebkitLineClamp: 3, // Limit to 3 lines
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {extractTextFromHTML(blog.content).substring(0, 200)}...
+          </Typography>
+
+          {/* Author and Date */}
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary", // Gray for author and date
+              fontStyle: "italic",
+              mt: "auto", // Push to the bottom
+            }}
+          >
+            By {blog.publishedByName} | {moment(new Date(blog.createdAt)).fromNow()}
+          </Typography>
+        </CardContent>
+      </Card>
+    </Grid>
+  ))}
+</Grid>
         </Box>
 
 {/* Save Modal */}
