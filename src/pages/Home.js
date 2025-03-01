@@ -294,7 +294,7 @@ const Home = () => {
                                 {blog.likeCount || 0} Likes
                               </Typography>
                               <Typography variant="caption" color="textSecondary">
-                                {blog.commentCount || 0} Comments
+                                {blog.commentCount+blog.replyCount} Comments
                               </Typography>
                             </Box>
                           </Paper>

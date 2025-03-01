@@ -595,7 +595,7 @@ const BlogDetail = () => {
           {/* Main Comment */}
           <ListItem alignItems="flex-start" sx={{ borderBottom: "1px solid #e0e0e0", py: 2 }}>
             <ListItemAvatar>
-              <Avatar sx={{ bgcolor: "black", color: "white" }}>{comment.name[0]}</Avatar>
+              <Avatar sx={{ bgcolor: "black", color: "white" }} src={comment.profilePhotoUrl}></Avatar>
             </ListItemAvatar>
             <ListItemText
               primary={
@@ -604,7 +604,7 @@ const BlogDetail = () => {
                     {comment.name}
                   </Typography>
                   <Typography variant="caption" color="textSecondary">
-                    {comment.date}
+                    {moment(new Date(comment.date)).fromNow()}
                   </Typography>
                 </Box>
               }
@@ -636,7 +636,7 @@ const BlogDetail = () => {
               {comment.replies.map((reply) => (
                 <ListItem key={reply._id} alignItems="flex-start" sx={{ py: 2 }}>
                   <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: "black", color: "white" }}>{reply.name[0]}</Avatar>
+                    <Avatar sx={{ bgcolor: "black", color: "white" }} src={comment.profilePhotoUrl}></Avatar>
                   </ListItemAvatar>
                   <ListItemText
                     primary={
@@ -645,7 +645,7 @@ const BlogDetail = () => {
                           {reply.name}
                         </Typography>
                         <Typography variant="caption" color="textSecondary">
-                          {reply.date}
+                          {moment(new Date(reply.date)).fromNow()}
                         </Typography>
                       </Box>
                     }
@@ -725,9 +725,13 @@ const BlogDetail = () => {
         <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1, mt: 8 }}>
       {blog.tags.map((tag, index) => (
         <Chip
+        onClick={()=>{
+          navigate(`/blogs/${tag}`)
+        }}
           key={index}
           label={tag}
           sx={{
+            cursor:"pointer",
             backgroundColor: "black",
             color: "white",
             borderRadius: "4px",

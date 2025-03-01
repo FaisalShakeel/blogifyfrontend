@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import BlogDetail from './pages/BlogDetail';
 import WriteBlog from './pages/WriteBlog';
 import Profile from './pages/Profile';
+import BlogsByTag from './pages/BlogsByTag';
 function App() {
   return (
     <BrowserRouter>
@@ -17,6 +18,7 @@ function App() {
       <Route path="/blog/:id" element={<BlogDetail/>}></Route>
       <Route path='/write-blog' element={<WriteBlog/>}></Route>
       <Route path="/profile" element={<Profile/>}></Route>
+      <Route path='/blogs/:tag' element={<BlogsByTag/>}></Route>
     </Routes>
     </BrowserRouter>
   );
