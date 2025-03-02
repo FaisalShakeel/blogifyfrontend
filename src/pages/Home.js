@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -15,6 +15,8 @@ import Navbar from "../components/Navbar";
 import axios from "axios";
 import moment from "moment/moment";
 import { useNavigate, useParams } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
+import CustomSnackbar from "../components/Snackbar";
 
 const categories = ["All", "Lifestyle", "Technology", "Health", "Business"];
 
@@ -61,13 +63,77 @@ const extractTextFromHTML = (htmlString) => {
   return text.replace(/\s+/g, " ").trim();
 };
 const Home = () => {
-  const navigate = useNavigate()
+  const { user } = useContext(AuthContext); // Get the current user from context
+
+  const navigate = useNavigate();
   const [blogs, setBlogs] = useState([]);
   const [popularBlogs, setPopularBlogs] = useState([]);
   const [featuredAuthors, setFeaturedAuthors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
-
+  const [isFollowButtonDisabled,setIsFollowButtonDisabled] = useState(false)
+  const [selectedAuthorId, setSelectedAuthorId] = useState("")
+  
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [severity, setSeverity] = useState("");
+  
+  const closeSnackbar = () => {
+    setIsSnackbarOpen(false);
+  };
+  const handleFollow = async (authorId) => {
+    setIsFollowButtonDisabled(true)
+    try {
+      const response = await axios.post(
+        `http://localhost:5000/users/follow`,
+        {
+          followingId: authorId,
+        },
+        { withCredentials: true }
+      );
+  
+      if (response.data.success) {
+        const updatedAuthor = response.data.author;
+        console.log("Updated Author", updatedAuthor);
+  
+        // Calculate isFollowing
+        const isFollowing = updatedAuthor.followers.some(
+          (follower) => follower._id === user.id
+        );
+        console.log("Is Following", isFollowing);
+  
+        // Create a new updatedAuthor object with isFollowing
+        const newUpdatedAuthor = {
+          ...updatedAuthor,
+          isFollowing: isFollowing,
+        };
+  
+        // Update the featuredAuthors state without triggering the useEffect
+        setFeaturedAuthors((prevAuthors) => {
+          return prevAuthors.map(author => 
+            author._id === updatedAuthor._id ? newUpdatedAuthor : author
+          );
+        });
+  
+        setMessage(response.data.message);
+        setSeverity("success");
+        setIsSnackbarOpen(true);
+      } else {
+        setMessage(response.data.message);
+        setSeverity("error");
+        setIsSnackbarOpen(true);
+        
+      }
+    } catch (error) {
+      setMessage(error.response?error.response.data.message:error.message);
+        setSeverity("error");
+        setIsSnackbarOpen(true);
+    }
+    finally{
+      setIsFollowButtonDisabled(false)
+    }
+  };
+  
   const getHomePage = async () => {
     try {
       const response = await axios.get("http://localhost:5000");
@@ -83,18 +149,32 @@ const Home = () => {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     getHomePage();
   }, []);
-
-  const filteredBlogs = blogs.filter(blog => 
-    selectedCategory === "All" || blog.category === selectedCategory
+  
+  // Run only once after initial data load
+useEffect(() => {
+  if (featuredAuthors.length > 0 && user && !featuredAuthors[0].hasOwnProperty('isFollowing')) {
+    const updatedAuthors = featuredAuthors.map((author) => {
+      const isFollowing = author.followers.some(
+        (follower) => follower._id === user.id
+      );
+      return { ...author, isFollowing };
+    });
+    setFeaturedAuthors(updatedAuthors);
+  }
+}, [featuredAuthors, user]);
+  
+  const filteredBlogs = blogs.filter(
+    (blog) => selectedCategory === "All" || blog.category === selectedCategory
+  );
+  
+  const filteredPopularBlogs = popularBlogs.filter(
+    (blog) => selectedCategory === "All" || blog.category === selectedCategory
   );
 
-  const filteredPopularBlogs = popularBlogs.filter(blog => 
-    selectedCategory === "All" || blog.category === selectedCategory
-  );
 
   return (
     <ThemeProvider theme={theme}>
@@ -345,6 +425,11 @@ const Home = () => {
                                 {author.bio}
                               </Typography>
                               <Button
+                              onClick={()=>{
+                                setSelectedAuthorId(author._id)
+                                handleFollow(author._id)
+                              }}
+                              disabled={isFollowButtonDisabled && author._id===selectedAuthorId}
                                 size="small"
                                 variant="contained"
                                 sx={{
@@ -358,7 +443,7 @@ const Home = () => {
                                   transition: "all 0.2s ease",
                                 }}
                               >
-                                Follow
+                                {author.isFollowing?"Following":"Follow"}
                               </Button>
                             </Box>
                           </Paper>
@@ -375,6 +460,7 @@ const Home = () => {
             </Grid>
           )}
         </Container>
+        <CustomSnackbar message={message} severity={severity} open={isSnackbarOpen} closeSnackbar={closeSnackbar}/>
       </Box>
     </ThemeProvider>
   );
