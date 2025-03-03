@@ -85,7 +85,7 @@ const Home = () => {
     setIsFollowButtonDisabled(true)
     try {
       const response = await axios.post(
-        `http://localhost:5000/users/follow`,
+        `http://localhost:5000/users/follow`,// we will replace base url by using .env in future when we will deply the url
         {
           followingId: authorId,
         },
@@ -400,6 +400,9 @@ useEffect(() => {
                       featuredAuthors.map((author, index) => (
                         <Grid item xs={12} key={index}>
                           <Paper
+                          onClick={(e)=>{
+                            navigate(`/profile/${author._id}`)
+                          }}
                             sx={{
                               p: 2,
                               display: "flex",
@@ -425,7 +428,8 @@ useEffect(() => {
                                 {author.bio}
                               </Typography>
                               <Button
-                              onClick={()=>{
+                              onClick={(e)=>{
+                                e.stopPropagation()
                                 setSelectedAuthorId(author._id)
                                 handleFollow(author._id)
                               }}

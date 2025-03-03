@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Card,
@@ -22,11 +22,16 @@ import {
   IconButton,
   TextField,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { AccessTime, Delete, Edit } from '@mui/icons-material';
+import axios from 'axios';
+import moment from 'moment';
+import CustomSnackbar from '../components/Snackbar';
 
 // Theme configuration
 const theme = createTheme({
@@ -70,70 +75,14 @@ const theme = createTheme({
     },
   },
 });
-
-// Mock Data
-const userData = {
-  name: "Sarah Anderson",
-  username: "@sarahanderson",
-  avatar: "/api/placeholder/150/150",
-  bio: "Digital storyteller | Tech enthusiast | Coffee lover",
-  role: "author", // or "reader"
-  email: "sarah.anderson@example.com",
-  followers: [
-    { id: 1, name: "John Doe", avatar: "/api/placeholder/40/40", bio: "Writer & Developer" },
-    { id: 2, name: "Jane Smith", avatar: "/api/placeholder/40/40", bio: "Travel Blogger" },
-  ],
-  following: [
-    { id: 1, name: "Mike Johnson", avatar: "/api/placeholder/40/40", bio: "Tech Reviewer" },
-    { id: 2, name: "Emily Brown", avatar: "/api/placeholder/40/40", bio: "Food Blogger" },
-  ],
-  lists: [
-    { id: 1, title: "Tech Trends 2025", image: "/api/placeholder/80/80", blogCount: 15 },
-    { id: 2, title: "Coffee Reviews", image: "/api/placeholder/80/80", blogCount: 8 },
-  ],
-  blogs: [
-    {
-      id: 1,
-      title: "The Future of AI",
-      image: "/api/placeholder/200/150",
-      description: "Exploring the latest developments in artificial intelligence and their impact on society.",
-      category: "Technology",
-      readTime: "5 min",
-      date: "Feb 10, 2025"
-    },
-    {
-      id: 2,
-      title: "Best Coffee Shops in NYC",
-      image: "/api/placeholder/200/150",
-      description: "A curated guide to the most unique and inspiring coffee spots in New York City.",
-      category: "Lifestyle",
-      readTime: "8 min",
-      date: "Feb 8, 2025"
-    },
-  ],
-  savedBlogs: [
-    {
-      id: 3,
-      title: "The Art of Street Photography",
-      image: "/api/placeholder/200/150",
-      description: "Master the fundamentals of capturing compelling street photography.",
-      category: "Photography",
-      readTime: "10 min",
-      date: "Feb 9, 2025",
-      author: "Mike Johnson"
-    },
-    {
-      id: 4,
-      title: "Sustainable Living Guide",
-      image: "/api/placeholder/200/150",
-      description: "Practical tips for reducing your carbon footprint and living sustainably.",
-      category: "Lifestyle",
-      readTime: "7 min",
-      date: "Feb 7, 2025",
-      author: "Emily Brown"
-    },
-  ]
+const extractTextFromHTML = (htmlString) => {
+  if (!htmlString) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = htmlString;
+  const text = temp.textContent || temp.innerText;
+  return text.replace(/\s+/g, " ").trim();
 };
+
 
 // Styled Components
 const StyledCard = styled(Card)({
@@ -174,50 +123,91 @@ const TabPanel = ({ children, value, index }) => (
     {value === index && <Box sx={{ pt: 2 }}>{children}</Box>}
   </div>
 );
-
-const BlogList = ({ blogs, showAuthor = false }) => (
+const BlogList = ({ blogs, showAuthor = false, saved, liked }) => (
   <Stack spacing={2}>
-    {blogs.map(blog => (
+    {blogs.map((blog) => (
       <BlogCard key={blog.id} elevation={0}>
-        <Avatar
-          variant="rounded"
-          src={blog.image}
-          sx={{ width: 200, height: 150, flexShrink: 0 }}
-        />
         <Box sx={{ flex: 1 }}>
+          {/* Blog Title and Category */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-            <Typography variant="h6" sx={{ mb: 1 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
               {blog.title}
             </Typography>
-            <StyledChip label={blog.category} size="small" />
+            <Chip label={blog.category} size="small" sx={{ backgroundColor: '#666666', color: 'white' }} />
           </Box>
+
+          {/* Blog Tags */}
+          {blog.tags && blog.tags.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {blog.tags.map((tag, index) => (
+                <Chip
+                  key={index}
+                  label={tag}
+                  size="small"
+                  sx={{
+                    backgroundColor: 'black',
+                    color: 'white',
+                    borderRadius: 1,
+                    fontSize: '0.75rem',
+                  }}
+                />
+              ))}
+            </Box>
+          )}
+
+          {/* Blog Content Excerpt */}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {blog.description}
+            {extractTextFromHTML(blog.content ? blog.content.slice(0, 200) + '...' : '')}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, color: 'text.secondary' }}>
+
+          {/* Blog Metadata (Date, Author, Actions) */}
+          <Box sx={{ display: 'flex', gap: 2, color: 'text.secondary', alignItems: 'center' }}>
             <Typography variant="caption">
-              {blog.date}
+              {moment(blog.createdAt).fromNow()}
             </Typography>
-            <Typography variant="caption">
-              {blog.readTime} read
-            </Typography>
+            {/* Conditionally render author */}
             {showAuthor && (
               <Typography variant="caption">
-                by {blog.author}
+                by {blog.publishedByName}
               </Typography>
+            )}
+            {/* Conditionally render edit and delete buttons */}
+            {!saved && !liked && (
+              <Box sx={{ marginLeft: 'auto', display: 'flex', gap: 1 }}>
+                <IconButton aria-label="edit" size="small" sx={{ color: 'text.secondary' }}>
+                  <Edit fontSize="small" />
+                </IconButton>
+                <IconButton aria-label="delete" size="small" sx={{ color: 'text.secondary' }}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Box>
             )}
           </Box>
         </Box>
       </BlogCard>
     ))}
   </Stack>
-);
-
+)
 const Profile = () => {
+  const {id} = useParams()
   const [tabValue, setTabValue] = useState(0);
   const [editTabValue, setEditTabValue] = useState(0);
-  const isAuthor = userData.role === 'author';
+  const [isAuthor,setIsAuthor] = useState(false)
+  const [user ,setUser] = useState({})
+  const [yourBlogs, setYourBlogs] = useState([])
+  const [likedBlogs, setLikedBlogs] = useState([])
+  const [savedBlogs ,setSavedBlogs] = useState([])
+  const [lists, setLists] = useState([])
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true)
+
+  const[isSnackbarOpen, setIsSnackbarOpen] = useState(false)
+  const [message, setMessage] = useState("")
+  const [severity ,setSeverity] = useState("")
+
+  const closeSnackbar=()=>{
+    setIsSnackbarOpen(false)
+  }
 
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
@@ -230,7 +220,53 @@ const Profile = () => {
   const handleBack = () => {
     navigate(-1);
   };
+  const getProfile = async()=>{
+    setLoading(true)
+    try{
+      const response = await axios.get(`http://localhost:5000/users/profile/${id}`,{withCredentials:true})
+      console.log("Profile",response.data)
+      if(response.data.success){
+        setUser(response.data.user)
+        setYourBlogs(response.data.blogs)
+        setLikedBlogs(response.data.likedBlogs)
+        setSavedBlogs(response.data.savedBlogs)
+        setLists(response.data.lists)
+      }
+      else{
+        setMessage(response.data.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
 
+      }
+    }
+    catch(e){
+      setMessage(e.response?e.response.data.message:e.message)
+        setSeverity("error")
+        setIsSnackbarOpen(true)
+    }
+    finally{
+      setLoading(false)
+
+    }
+  }
+  useEffect(()=>{
+  if(user){
+  setIsAuthor(user.role=="Author")
+  }
+  },[user])
+  useEffect(()=>{
+    getProfile()
+  },[id])
+  if(loading){
+    return(
+      <Box>
+        
+        <Navbar/>
+    <Box sx={{height:"100vh",width:"100%",display:"flex",justifyContent:"center",alignItems:"center"}}>
+      <CircularProgress sx={{color:'black'}} thickness={8} size={40}></CircularProgress>
+
+    </Box></Box>)
+  }
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -261,129 +297,199 @@ const Profile = () => {
             <StyledCard>
               <CardContent sx={{ pt: 2 }}>
                 <Box sx={{ mb: 4, textAlign: 'center' }}>
-                  <StyledAvatar src={userData.avatar} alt={userData.name} />
+                  <StyledAvatar src={user.profilePhotoUrl} alt={user.name} />
                   <Typography variant="h4" sx={{ mt: 2, fontWeight: 600 }}>
-                    {userData.name}
+                    {user.name}
                   </Typography>
-                  <Typography variant="subtitle1" color="text.secondary">
-                    {userData.username}
-                  </Typography>
+                  
                   <Typography variant="body1" sx={{ mt: 1 }}>
-                    {userData.bio}
+                    {user.bio}
                   </Typography>
                 </Box>
 
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                  <Tabs value={tabValue} onChange={handleTabChange} centered>
+                  <Tabs variant='scrollable' value={tabValue} onChange={handleTabChange}>
                     <Tab label="Your Lists" sx={{borderRadius:"35px"}} />
                     {isAuthor && <Tab label="Your Blogs" sx={{borderRadius:"35px"}} />}
                     <Tab label="Saved Blogs" sx={{borderRadius:"35px"}} />
+                    <Tab label="Liked Blogs" sx={{borderRadius:"35px"}} />
+                   
                     <Tab label="Edit Profile" sx={{borderRadius:"35px"}} />
                   </Tabs>
                 </Box>
 
                 <TabPanel value={tabValue} index={0}>
-                  <Grid container spacing={2}>
-                    {userData.lists.map(list => (
-                      <Grid item xs={12} sm={6} key={list.id}>
-                        <Paper elevation={0} sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 2, backgroundColor: '#fff' }}>
-                          <Avatar
-                            variant="rounded"
-                            src={list.image}
-                            sx={{ width: 80, height: 80 }}
-                          />
-                          <Box>
-                            <Typography variant="h6">{list.title}</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {list.blogCount} blogs
-                            </Typography>
-                          </Box>
-                        </Paper>
-                      </Grid>
-                    ))}
-                  </Grid>
+                <Grid container spacing={3}>
+  {lists.map((list) => (
+    <Grid item xs={12} sm={6} key={list._id}>
+      <Paper
+        elevation={0}
+        sx={{
+          p: 3,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 3,
+          backgroundColor: '#fff',
+          borderRadius: 3,
+          border: '1px solid rgba(0, 0, 0, 0.06)',
+          transition: 'all 0.3s ease-in-out',
+          position: 'relative',
+          overflow: 'hidden',
+          '&:hover': {
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+            transform: 'translateY(-4px)',
+            '& .hover-reveal': {
+              opacity: 1,
+            },
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            width: '100%',
+            height: '3px',
+            background: 'linear-gradient(90deg, #000 0%, #555 100%)',
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+          },
+          '&:hover::after': {
+            opacity: 1,
+          }
+        }}
+      >
+        {/* List Image with enhanced styling */}
+        <Avatar
+          variant="rounded"
+          src={list.photoUrl}
+          sx={{
+            width: 96,
+            height: 96,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+            border: '2px solid #fff',
+            transition: 'transform 0.3s ease',
+            '&:hover': {
+              transform: 'scale(1.05)',
+            }
+          }}
+        />
+
+        {/* List Details with improved typography */}
+        <Box sx={{ flex: 1 }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+              mb: 1,
+              color: '#000',
+              fontSize: '1.1rem',
+              letterSpacing: '-0.3px'
+            }}
+          >
+            {list.title}
+          </Typography>
+          
+          <Typography
+            variant="body2"
+            sx={{
+              color: '#333',
+              mb: 1.5,
+              lineHeight: 1.4,
+              display: '-webkit-box',
+              overflow: 'hidden',
+              WebkitBoxOrient: 'vertical',
+              WebkitLineClamp: 2,
+            }}
+          >
+            {list.description}
+          </Typography>
+          
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Chip
+              size="small"
+              label={`${list.blogs.length} blogs`}
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                color: '#444',
+                fontWeight: 500,
+                px: 0.5,
+                height: 24,
+                fontSize: '0.75rem',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                }
+              }}
+            />
+            
+          </Box>
+        </Box>
+
+        {/* Actions with hover effect */}
+        <Box
+          className="hover-reveal"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            opacity: 0.7,
+            transition: 'opacity 0.3s ease',
+          }}
+        >
+          <IconButton
+            aria-label="edit"
+            size="small"
+            sx={{
+              color: '#000',
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+              },
+              width: 36,
+              height: 36,
+            }}
+          >
+            <Edit fontSize="small" />
+          </IconButton>
+          
+          <IconButton
+            aria-label="delete"
+            size="small"
+            sx={{
+              color: '#000',
+              backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.1)',
+              },
+              width: 36,
+              height: 36,
+            }}
+          >
+            
+            <Delete fontSize="small" />
+          </IconButton>
+        </Box>
+      </Paper>
+    </Grid>
+  ))}
+</Grid>
                 </TabPanel>
 
                 {isAuthor && (
                   <TabPanel value={tabValue} index={1}>
-                    <BlogList blogs={userData.blogs} />
+                    <BlogList blogs={yourBlogs} saved={false} liked={false} />
                   </TabPanel>
                 )}
 
                 <TabPanel value={tabValue} index={isAuthor ? 2 : 1}>
-                  <BlogList blogs={userData.savedBlogs} showAuthor={true} />
+                  <BlogList blogs={savedBlogs} saved={true} liked={false} showAuthor={true} />
                 </TabPanel>
-
-                {/* Edit Profile Tab */}
-                <TabPanel value={tabValue} index={isAuthor ? 3 : 2}>
-                  <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={editTabValue} onChange={handleEditTabChange} centered>
-                      <Tab label="Profile Information" sx={{borderRadius:"35px"}} />
-                      <Tab label="Change Password" sx={{borderRadius:"35px"}} />
-                    </Tabs>
-                  </Box>
-
-                  <TabPanel value={editTabValue} index={0}>
-                    <Box sx={{ mt: 2 }}>
-                      <TextField
-                        fullWidth
-                        label="Name"
-                        defaultValue={userData.name}
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Email"
-                        defaultValue={userData.email}
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Bio"
-                        defaultValue={userData.bio}
-                        multiline
-                        rows={4}
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Role"
-                        defaultValue={userData.role}
-                        disabled
-                        sx={{ mb: 2 }}
-                      />
-                      <Button variant="contained" sx={{ backgroundColor: '#000', color: '#fff' }}>
-                        Save Changes
-                      </Button>
-                    </Box>
-                  </TabPanel>
-
-                  <TabPanel value={editTabValue} index={1}>
-                    <Box sx={{ mt: 2 }}>
-                      <TextField
-                        fullWidth
-                        label="Current Password"
-                        type="password"
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="New Password"
-                        type="password"
-                        sx={{ mb: 2 }}
-                      />
-                      <TextField
-                        fullWidth
-                        label="Confirm New Password"
-                        type="password"
-                        sx={{ mb: 2 }}
-                      />
-                      <Button variant="contained" sx={{ backgroundColor: '#000', color: '#fff' }}>
-                        Change Password
-                      </Button>
-                    </Box>
-                  </TabPanel>
+                <TabPanel value={tabValue} index={isAuthor ? 3 : 1}>
+                  <BlogList blogs={likedBlogs} showAuthor={true} saved={false} liked={true} />
                 </TabPanel>
+                
+
+
               </CardContent>
             </StyledCard>
           </Grid>
@@ -395,14 +501,14 @@ const Profile = () => {
               <StyledCard>
                 <CardContent>
                   <Typography variant="h6"  sx={{ mb: 2,textAlign:"center", backgroundColor:"black",color:"white",borderRadius:"35px",mb:2 }}>
-                    Following ({userData.following.length})
+                    Following ({user.followings.length})
                   </Typography>
                   <List>
-                    {userData.following.map(user => (
-                      <React.Fragment key={user.id}>
+                    {user.followings.map(user => (
+                      <React.Fragment key={user._id}>
                         <ListItem alignItems="flex-start">
                           <ListItemAvatar>
-                            <Avatar src={user.avatar} />
+                            <Avatar src={user.profilePhotoUrl} />
                           </ListItemAvatar>
                           <ListItemText
                             primary={user.name}
@@ -420,14 +526,14 @@ const Profile = () => {
               <StyledCard>
                 <CardContent>
                   <Typography variant="h6" sx={{ mb: 2,textAlign:"center", backgroundColor:"black",color:"white",borderRadius:"35px" }}>
-                    Followers ({userData.followers.length})
+                    Followers ({user.followers.length})
                   </Typography>
                   <List>
-                    {userData.followers.map(user => (
-                      <React.Fragment key={user.id}>
+                    {user.followers.map(user => (
+                      <React.Fragment key={user._id}>
                         <ListItem alignItems="flex-start">
                           <ListItemAvatar>
-                            <Avatar src={user.avatar} />
+                            <Avatar src={user.profilePhotoUrl} />
                           </ListItemAvatar>
                           <ListItemText
                             primary={user.name}
@@ -443,6 +549,7 @@ const Profile = () => {
             </Stack>
           </Grid>
         </Grid>
+        <CustomSnackbar open={isSnackbarOpen} message={message} severity={severity} closeSnackbar={closeSnackbar}/>
       </Box>
     </ThemeProvider>
   );

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -28,6 +28,7 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import CreateOutlinedIcon from "@mui/icons-material/CreateOutlined";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
 
 const theme = createTheme({
   typography: {
@@ -36,6 +37,7 @@ const theme = createTheme({
 });
 
 const Navbar = () => {
+  const {user} = useContext(AuthContext)
   const navigate = useNavigate()
   const [anchorEl, setAnchorEl] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -162,7 +164,7 @@ const Navbar = () => {
               <NotificationsNoneIcon />
             </IconButton>
             <IconButton onClick={handleMenuClick}>
-              <Avatar sx={{ backgroundColor: "black", color: "white" }}>A</Avatar>
+              <Avatar sx={{ backgroundColor: "black", color: "white" }} src={user?user.profilePhotoUrl:""} alt="A"></Avatar>
             </IconButton>
             <Menu
               anchorEl={anchorEl}
@@ -188,13 +190,15 @@ const Navbar = () => {
                       backgroundColor: "black", 
                       color: "white" 
                     }}
+                    src={user?user.profilePhotoUrl:""}
+                    alt="A"
                   >
-                    A
+                    
                   </Avatar>
                   <Box>
-                    <Typography sx={{ fontWeight: "bold" }}>John Doe</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      john.doe@example.com
+                    <Typography sx={{ fontWeight: "bold" }}>{user.name}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user.email}
                     </Typography>
                   </Box>
                 </Box>
@@ -203,7 +207,7 @@ const Navbar = () => {
               <Divider />
 
               {/* Menu Items */}
-              <MenuItem onClick={handleMenuClose} sx={{ py: 1.5 }}>
+              <MenuItem onClick={()=>{navigate(`/profile/${user.id}`)}} sx={{ py: 1.5 }}>
                 <ListItemIcon>
                   <PersonOutlineIcon sx={{ color: "black" }} />
                 </ListItemIcon>
