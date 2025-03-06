@@ -7,6 +7,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import CustomSnackbar from '../components/Snackbar' ;
+import Navbar from '../components/Navbar';
 const extractTextFromHTML = (htmlString) => {
     if (!htmlString) return "";
     const temp = document.createElement("div");
@@ -80,8 +81,8 @@ const BlogsByTag = () => {
         setIsSnackbarOpen(false)
     }
     const handleBack = () => {
-        // Add your navigation logic here
-        console.log('Back button clicked');
+     navigate(-1)
+    
     };
     const getBlogsAndPopularTags=async()=>{
         setLoading(true)
@@ -124,6 +125,7 @@ const BlogsByTag = () => {
 
     return (
         <ThemeProvider theme={theme}>
+            <Navbar/>
             <Container maxWidth="lg" sx={{ py: 4 }}>
                 {/* Back Button */}
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>

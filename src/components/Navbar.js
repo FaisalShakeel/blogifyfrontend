@@ -63,6 +63,7 @@ const Navbar = () => {
           backgroundColor: "white",
           boxShadow: "none",
           zIndex: 999,
+          overflow:"hidden",
           borderBottom: "1px solid #ddd",
           width: "100%",
         }}
@@ -72,7 +73,7 @@ const Navbar = () => {
             display: "flex",
             alignItems: "center",
             width: "100%",
-            maxWidth: "1280px",
+            maxWidth:"95vw",
             margin: "0 auto",
             px: { xs: 1, md: 4 },
             minHeight: { xs: "70px" },

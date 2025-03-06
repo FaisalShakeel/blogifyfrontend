@@ -8,6 +8,8 @@ import BlogDetail from './pages/BlogDetail';
 import WriteBlog from './pages/WriteBlog';
 import Profile from './pages/Profile';
 import BlogsByTag from './pages/BlogsByTag';
+import EditBlog from './pages/EditBlog';
+import Search from './pages/Search';
 function App() {
   return (
     <BrowserRouter>
@@ -19,6 +21,8 @@ function App() {
       <Route path='/write-blog' element={<WriteBlog/>}></Route>
       <Route path="/profile/:id" element={<Profile/>}></Route>
       <Route path='/blogs/:tag' element={<BlogsByTag/>}></Route>
+      <Route path='/blog/edit/:id' element={<EditBlog/>}></Route>
+      <Route path="/search" element={<Search/>}></Route>
     </Routes>
     </BrowserRouter>
   );
