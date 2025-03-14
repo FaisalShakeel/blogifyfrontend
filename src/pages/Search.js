@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -26,6 +26,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import debounce from 'lodash/debounce';
 import axios from 'axios';
 import Navbar from '../components/Navbar';
+import { useSearchQuery } from '../contexts/SearchQueryContext';
 
 // Create theme with Velyra font and black-and-white palette
 const theme = createTheme({
@@ -55,6 +56,13 @@ const theme = createTheme({
     },
   },
 });
+const extractTextFromHTML = (htmlString) => {
+  if (!htmlString) return "";
+  const temp = document.createElement("div");
+  temp.innerHTML = htmlString;
+  const text = temp.textContent || temp.innerText;
+  return text.replace(/\s+/g, " ").trim();
+};
 
 // Styled components
 const SearchContainer = styled(Box)(({ theme }) => ({
@@ -149,7 +157,16 @@ const BackButton = styled(IconButton)(({ theme }) => ({
   },
 }));
 
+const LoaderContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  width: '100%',
+  padding: theme.spacing(3, 0),
+}));
+
 const Search = () => {
+  const { setSearchQuery } = useSearchQuery();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const initialQuery = searchParams.get('query') || '';
@@ -161,6 +178,7 @@ const Search = () => {
     lists: [],
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [page, setPage] = useState({
     authors: 1,
     blogs: 1,
@@ -172,15 +190,27 @@ const Search = () => {
     lists: 1,
   });
   const ITEMS_PER_PAGE = 2;
+  const cancelTokenSource = useRef(null); // For canceling previous requests
 
   const fetchSearchResults = useCallback(async (term, pageNumbers) => {
     if (!term || term.length < 2) {
       setSearchResults({ authors: [], blogs: [], lists: [] });
+      setHasSearched(false);
       return;
     }
-  
+
+    if (cancelTokenSource.current) {
+      cancelTokenSource.current.cancel('New search initiated');
+    }
+    cancelTokenSource.current = axios.CancelToken.source();
+
     setIsLoading(true);
+    setHasSearched(true);
+    
     try {
+      // Add a slight delay to ensure the loading spinner is visible
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
       const response = await axios.get('http://localhost:5000/search', {
         withCredentials: true,
         params: {
@@ -190,9 +220,12 @@ const Search = () => {
           listPage: pageNumbers.lists,
           limit: ITEMS_PER_PAGE,
         },
+        cancelToken: cancelTokenSource.current.token,
       });
-  
+
+
       const { authors, blogs, lists } = response.data;
+      console.log("Lists",lists)
       setSearchResults({
         authors: authors.items,
         blogs: blogs.items,
@@ -204,18 +237,30 @@ const Search = () => {
         lists: Math.ceil(lists.total / ITEMS_PER_PAGE),
       });
     } catch (error) {
-      console.error('Search error:', error);
+      if (axios.isCancel(error)) {
+        console.log('Request canceled:', error.message);
+      } else {
+        console.error('Search error:', error);
+        // Reset search results on error
+        setSearchResults({ authors: [], blogs: [], lists: [] });
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
-  const debouncedSearch = debounce((term) => {
-    setSearchParams({ query: term });
-    fetchSearchResults(term, page);
-  }, 300);
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      setSearchParams({ query: term });
+      setPage({ authors: 1, blogs: 1, lists: 1 });
+      fetchSearchResults(term, { authors: 1, blogs: 1, lists: 1 });
+    }, 300),
+    [fetchSearchResults, setSearchParams]
+  );
 
   useEffect(() => {
     if (initialQuery) {
+      setHasSearched(true);
       fetchSearchResults(initialQuery, page);
     }
   }, [initialQuery, page, fetchSearchResults]);
@@ -223,7 +268,14 @@ const Search = () => {
   const handleSearchChange = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
-    debouncedSearch(term);
+    setSearchQuery(term);
+    
+    if (term.length < 2) {
+      setHasSearched(false);
+      setSearchResults({ authors: [], blogs: [], lists: [] });
+    } else {
+      debouncedSearch(term);
+    }
   };
 
   const handlePageChange = (category) => (event, value) => {
@@ -231,10 +283,23 @@ const Search = () => {
       ...prev,
       [category]: value,
     }));
+    
+    // Ensure loading state is set when changing pages
+    setIsLoading(true);
+    fetchSearchResults(searchTerm, {
+      ...page,
+      [category]: value,
+    });
   };
 
   const handleBackClick = () => {
-    navigate(-1);
+    // Check if there's a previous page in history
+    if (window.history.length > 1) {
+      navigate(-1); // Go back to the previous page
+    } else {
+      // If no previous page, redirect to a default route (e.g., home)
+      navigate('/home', { replace: true });
+    }
   };
 
   const renderSection = (title, items, category) => (
@@ -283,13 +348,13 @@ const Search = () => {
                   mr: { xs: 0, sm: 3 },
                 }}>
                   <Avatar 
-                    src={category === 'authors' ? item.photo : item.image} // Use photo for authors, image for lists
+                    src={category === 'authors' ? item.photo : item.photoUrl} 
                     alt={item.name || item.title} 
                     sx={{ 
-                      borderRadius: '8px',
+                      borderRadius:category=='authors'?'50px':'10px',
                       width: { xs: 90, sm: 70 },
                       height: { xs: 90, sm: 70 },
-                      border: '2px solid #000000',
+                      border: '1px solid white',
                     }} 
                   />
                 </ListItemAvatar>
@@ -332,7 +397,7 @@ const Search = () => {
                         alignItems: { xs: 'center', sm: 'flex-start' } 
                       }}>
                         <Typography sx={{ mb: 1.5, textAlign: { xs: 'center', sm: 'left' } }}>
-                          {item.description}
+                          {extractTextFromHTML(item.content)?extractTextFromHTML(item.content).slice(0,200)+"..":""}
                         </Typography>
                         by {item.author.name} •{' '}
                         <Typography component="span" sx={{ color: '#000000', fontWeight: 600 }}>
@@ -406,9 +471,48 @@ const Search = () => {
     </Fade>
   );
 
+  const renderNoResults = () => (
+    <Fade in={true} timeout={600}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        width: '100%',
+        mt: 6,
+        mb: 6,
+      }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 600,
+            color: '#000000',
+            textAlign: 'center',
+            mb: 2,
+          }}
+        >
+          No results found
+        </Typography>
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            color: 'rgba(0, 0, 0, 0.7)',
+            textAlign: 'center',
+          }}
+        >
+          Try different keywords or check your spelling
+        </Typography>
+      </Box>
+    </Fade>
+  );
+
+  const hasResults = searchResults.authors.length > 0 || 
+                     searchResults.blogs.length > 0 || 
+                     searchResults.lists.length > 0;
+
   return (
     <ThemeProvider theme={theme}>
-        <Navbar/>
+      <Navbar />
       <Box sx={{ 
         backgroundColor: '#ffffff', 
         minHeight: '100vh', 
@@ -435,31 +539,46 @@ const Search = () => {
                 </InputAdornment>
               ),
             }}
-            sx={{ mt: 6, mb: 6 }}
+            sx={{ mt: 6, mb: 4 }}
           />
 
-          {isLoading ? (
+          {/* Always render the loading indicator container when search term exists */}
+          {searchTerm && (
+            <LoaderContainer>
+              {isLoading ? (
+                <CircularProgress 
+                  size={40} 
+                  thickness={4} 
+                  sx={{ 
+                    color: '#000000',
+                    mb: 2,
+                  }} 
+                />
+              ) : (
+                // This invisible div maintains spacing when not loading
+                <Box sx={{ height: 40, mb: 2 }} />
+              )}
+            </LoaderContainer>
+          )}
+
+          {/* Only render results when not loading and there are results */}
+          {!isLoading && hasSearched && (
             <Box sx={{ 
+              width: '100%', 
               display: 'flex', 
-              justifyContent: 'center', 
-              my: 6,
-              width: '100%',
+              flexDirection: 'column', 
+              alignItems: 'center' 
             }}>
-              <CircularProgress sx={{ color: '#000000', size: 50 }} />
+              {hasResults ? (
+                <>
+                  {searchResults.authors.length > 0 && renderSection('Authors', searchResults.authors, 'authors')}
+                  {searchResults.blogs.length > 0 && renderSection('Blogs', searchResults.blogs, 'blogs')}
+                  {searchResults.lists.length > 0 && renderSection('Lists', searchResults.lists, 'lists')}
+                </>
+              ) : (
+                renderNoResults()
+              )}
             </Box>
-          )   : (
-            searchTerm && (
-              <Box sx={{ 
-                width: '100%', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center' 
-              }}>
-                {searchResults.authors.length > 0 && renderSection('Authors', searchResults.authors, 'authors')}
-                {searchResults.blogs.length > 0 && renderSection('Blogs', searchResults.blogs, 'blogs')}
-                {searchResults.lists.length > 0 && renderSection('Lists', searchResults.lists, 'lists')}
-              </Box>
-            )
           )}
         </SearchContainer>
       </Box>
